@@ -810,8 +810,8 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
-        self.num_iterations_per_epoch = 5 #250
-        self.num_val_iterations_per_epoch = 1 #50
+        self.num_iterations_per_epoch = 250
+        self.num_val_iterations_per_epoch = 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
