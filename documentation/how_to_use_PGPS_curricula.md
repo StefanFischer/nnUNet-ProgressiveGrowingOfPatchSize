@@ -1,4 +1,4 @@
-# How to use Progressive Growing of Patch Size for Training nnU-Net**
+# How to use Progressive Growing of Patch Size for Training nnU-Net
 
 This is the official implementation of the Journal Article **Progressive Growing of Patch Size: Improved Convergence for Patch-based Medical Image Segmentation via Curriculum
 Learning**, which is an extension of the MICCAI 2024 main conference paper **Progressive growing of patch size: Resource-efficient curriculum learning for dense prediction tasks** accesible [here](https://papers.miccai.org/miccai-2024/paper/2008_paper.pdf).
@@ -10,9 +10,9 @@ We implemented two different curriculum modes and tested them on 15 popular data
 1. Performance Mode: this mode significantly outperforms standard fixed patch size training in all 15 tested datasets (Medical Segmentation Decathlon, BTCV, AMOS22, KiTS23, TotalSegmentatorV2, ToothFairy2)j by improving the overall Dice Score by a relative ~1.5%, while only ~90% of the original runtime
 2. Efficiency Mode: this mode performs on par with fixed patch size training, while only needing ~45% of the original runtime 
   
-## How to use Progressive Growing of Patch Size?
+## How to use Progressive Growing of Patch Size
 
-Currently only the 3d_fullres UNET_CONFIGURATION is supported. The code for the curricula can be found [here](../nnunetv2/training/nnUNetTrainer/variants/sampling)
+Currently only the 3d_fullres UNET_CONFIGURATION is supported. The code for the curricula can be found [here](../nnunetv2/training/nnUNetTrainer/variants/sampling).
 
 ### Using the default UNet Version
 
