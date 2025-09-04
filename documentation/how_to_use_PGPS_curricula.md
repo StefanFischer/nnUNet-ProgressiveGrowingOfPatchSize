@@ -12,7 +12,7 @@ We implemented two different curriculum modes and tested them on 15 popular data
   
 ## How to use Progressive Growing of Patch Size?
 
-Currently only the 3d_fullres UNET_CONFIGURATION is supported. 
+Currently only the 3d_fullres UNET_CONFIGURATION is supported. The code for the curricula can be found [here](../nnunetv2/training/nnUNetTrainer/variants/sampling)
 
 ### Using the default UNet Version
 
