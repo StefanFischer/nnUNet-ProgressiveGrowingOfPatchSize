@@ -12,6 +12,8 @@ We implemented two different curriculum modes and tested them on 15 popular data
   
 ## How to use Progressive Growing of Patch Size?
 
+Currently only the 3d_fullres UNET_CONFIGURATION is supported. 
+
 ### Using the default UNet Version
 
 First you need to understand how to use the original nnU-Net version, which you can find an instruction [here](how_to_use_nnunet.md). 
@@ -19,19 +21,19 @@ For using the curriculum, you only need to specify the Progressive Growing of Pa
 
 For the curriculum performance mode:
 ```bash
-nnUNetv2_train DATASET_NAME_OR_ID UNET_CONFIGURATION FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance
+nnUNetv2_train DATASET_NAME_OR_ID 3d_fullres FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance
 ```
 
 and for the curriculum efficiency mode:
 ```bash
-nnUNetv2_train DATASET_NAME_OR_ID UNET_CONFIGURATION FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency
+nnUNetv2_train DATASET_NAME_OR_ID 3d_fullres FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency
 ```
 
 ### Using the bigger ResNet UNet Version
 
 You can easily just specify the ResNetUNet version in form of the correct planner (here the ResEncUNetM version) and the curriculum performance mode. You can find the different ResEncUNet versions and how to preprocess/plan for this [here](resenc_presets.md):
 ```bash
-nnUNetv2_train DATASET_NAME_OR_ID UNET_CONFIGURATION FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance -p nnUNetResEncUNetMPlans
+nnUNetv2_train DATASET_NAME_OR_ID 3d_fullres FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance -p nnUNetResEncUNetMPlans
 ```
 
 ### Using costum backbones
