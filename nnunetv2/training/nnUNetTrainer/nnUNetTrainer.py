@@ -213,9 +213,9 @@ class nnUNetTrainer(object):
                 self.enable_deep_supervision
             ).to(self.device)
             # compile network for free speedup
-            if self._do_i_compile():
-                self.print_to_log_file('Using torch.compile...')
-                self.network = torch.compile(self.network)
+            #if self._do_i_compile():
+                #self.print_to_log_file('Using torch.compile...')
+                #self.network = torch.compile(self.network)
 
             self.optimizer, self.lr_scheduler = self.configure_optimizers()
             # if ddp, wrap in DDP wrapper
@@ -964,7 +964,7 @@ class nnUNetTrainer(object):
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
+        with autocast(self.device.type, enabled=True, dtype=torch.half) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             del data
             l = self.loss(output, target)
