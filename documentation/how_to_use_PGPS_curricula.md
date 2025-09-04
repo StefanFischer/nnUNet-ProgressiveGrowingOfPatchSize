@@ -1,7 +1,7 @@
 # How to use Progressive Growing of Patch Size for Training nnU-Net**
 
 This is the official implementation of the Journal Article **Progressive Growing of Patch Size: Improved Convergence for Patch-based Medical Image Segmentation via Curriculum
-Learning**, which is an extension of the MICCAI 2024 main conference paper **Progressive growing of patch size: Resource-efficient curriculum learning for dense prediction tasks** accesible [here]([https://link-url-here.org](https://papers.miccai.org/miccai-2024/paper/2008_paper.pdf))
+Learning**, which is an extension of the MICCAI 2024 main conference paper **Progressive growing of patch size: Resource-efficient curriculum learning for dense prediction tasks** accesible [here]([(https://papers.miccai.org/miccai-2024/paper/2008_paper.pdf)])
 
 ## Why should you use the Progressive Growing of Patch Size?
 
