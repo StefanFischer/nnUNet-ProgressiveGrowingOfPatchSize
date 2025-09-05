@@ -297,7 +297,7 @@ class nnUNetDataLoader(DataLoader):
 
 
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
 
 
     def get_dataloaders(self):
@@ -380,9 +380,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         """
 
         def compute_batch_size(cur_ps, max_ps):
-            cur_vox = cur_ps[0] * cur_ps[1] * cur_ps[2]
-            max_vox = self.original_batch_size * max_ps[0] * max_ps[1] * max_ps[2]
-            bs = int(max_vox / cur_vox)
+            bs = self.original_batch_size
             return bs
 
         cur_patch_size = self.min_patch_size
@@ -575,3 +573,11 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         self.num_val_iterations_per_epoch = 50
         self.num_epochs = 1000
         self.current_epoch = 0
+
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency):
+    def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
+        rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes = \
+            super().configure_rotation_dummyDA_mirroring_and_inital_patch_size()
+        mirror_axes = None
+        self.inference_allowed_mirroring_axes = None
+        return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
