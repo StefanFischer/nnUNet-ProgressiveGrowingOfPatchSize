@@ -585,9 +585,12 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
 
         if regions is not None:
             # the ignore label must also be converted
-            val_transforms.append(ConvertSegmentationToRegionsTransform2(list(regions) + [ignore_label]
-                                                                        if ignore_label is not None else regions,
-                                                                        'target', 'target'))
+            val_transforms.append(
+                ConvertSegmentationToRegionsTransform2(
+                    regions=list(regions) + [ignore_label] if ignore_label is not None else regions,
+                    channel_in_seg=0
+                )
+            )
 
         if deep_supervision_scales is not None:
             val_transforms.append(DownsampleSegForDSTransform3(deep_supervision_scales, 0, input_key='target',
@@ -684,9 +687,12 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
 
         if regions is not None:
             # the ignore label must also be converted
-            tr_transforms.append(ConvertSegmentationToRegionsTransform2(list(regions) + [ignore_label]
-                                                                       if ignore_label is not None else regions,
-                                                                       'target', 'target'))
+            tr_transforms.append(
+                ConvertSegmentationToRegionsTransform2(
+                    regions=list(regions) + [ignore_label] if ignore_label is not None else regions,
+                    channel_in_seg=0
+                )
+            )
 
         if deep_supervision_scales is not None:
             tr_transforms.append(DownsampleSegForDSTransform3(deep_supervision_scales, 0, input_key='target',
