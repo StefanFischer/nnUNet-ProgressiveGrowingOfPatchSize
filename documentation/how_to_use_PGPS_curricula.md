@@ -42,3 +42,18 @@ If you want to use another costum network, here are the aspects you need to adju
 - Implement your architecture
 - Think about disabling deep supervision in the trainer
 - Adjust the patch size planner of the Progressive Growing of Patch Size curriculum, by setting the minimal processable patch size that your architecture can handle
+
+### CAREFUL: When directional defined classes are presented
+
+Directional defined classes are often present in multi-organ segmentation tasks (BTCV, AMOS22, TotalSegmentator) or in Tooth segmentation (ToothFairy). They are defined as left/right, upper/lower, or front/back structures or even combinations of multiple directions/axis (BTCV/AMOS: left/right kidney, ToothFairy2: Upper Right Central Incisor). As PGPS curricula do have limited context in the starting phase of training, the curriculum struggles with such classes. This is mostly due to nnU-Net defaulty used mirror data augmentation. **Those mirror augmentations have to be disabled for such datasets as the performance can be strongly dropping due to this!** This generally also results in improved performance for default nnU-Net with fixed patch size training. For this scenario ,there are special trainer files available that disable mirroring augmentation during training and test-time.
+
+For the curriculum performance mode:
+```bash
+nnUNetv2_train DATASET_NAME_OR_ID 3d_fullres FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring
+```
+
+and for the curriculum efficiency mode:
+```bash
+nnUNetv2_train DATASET_NAME_OR_ID 3d_fullres FOLD -tr nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency_NoMirroring
+```
+
