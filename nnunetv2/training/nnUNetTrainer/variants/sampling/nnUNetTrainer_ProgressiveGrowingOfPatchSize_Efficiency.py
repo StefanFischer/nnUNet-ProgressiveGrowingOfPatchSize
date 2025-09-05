@@ -801,7 +801,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
         # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
         self.oversample_foreground_percent = 0.5
 
-        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>500)
         os.environ["nnUNet_keep_files_open"] ="True"
 
         # default nnU-Net:
@@ -814,5 +814,14 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
         self.num_val_iterations_per_epoch = 50
         self.num_epochs = 1000
         self.current_epoch = 0
+
+
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency):
+    def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
+        rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes = \
+            super().configure_rotation_dummyDA_mirroring_and_inital_patch_size()
+        mirror_axes = None
+        self.inference_allowed_mirroring_axes = None
+        return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
 
 
