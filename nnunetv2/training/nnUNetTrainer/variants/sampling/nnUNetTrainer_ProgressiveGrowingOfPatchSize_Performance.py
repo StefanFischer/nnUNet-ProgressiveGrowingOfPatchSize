@@ -109,88 +109,30 @@ def _verify_spatial_size(size: list[int]) -> None:
 
 F._verify_spatial_size = _verify_spatial_size
 
-
-
-import abc
-class BasicTransform(abc.ABC):
-    """
-    Transforms are applied to each sample individually. The dataloader is responsible for collating, or we might consider a CollateTransform
-
-    We expect (C, X, Y) or (C, X, Y, Z) shaped inputs for image and seg (yes seg can have more color channels)
-
-    No idea what keypoint and bbox will look like, this is Michaels turf
-    """
-    def __init__(self):
-        pass
-
-    def __call__(self, **data_dict) -> dict:
-        params = self.get_parameters(**data_dict)
-        return self.apply(data_dict, **params)
-
-    def apply(self, data_dict, **params):
-        if data_dict.get('image') is not None:
-            data_dict['image'] = self._apply_to_image(data_dict['image'], **params)
-
-        if data_dict.get('regression_target') is not None:
-            data_dict['regression_target'] = self._apply_to_regr_target(data_dict['regression_target'], **params)
-
-        if data_dict.get('segmentation') is not None:
-            data_dict['segmentation'] = self._apply_to_segmentation(data_dict['segmentation'], **params)
-
-        if data_dict.get('keypoints') is not None:
-            data_dict['keypoints'] = self._apply_to_keypoints(data_dict['keypoints'], **params)
-
-        if data_dict.get('bbox') is not None:
-            data_dict['bbox'] = self._apply_to_bbox(data_dict['bbox'], **params)
-
+class ConvertSegmentationToRegionsTransform2(AbstractTransform):
+    def __init__(self, regions: Union[List, Tuple],
+                 seg_key: str = "seg", output_key: str = "seg", seg_channel: int = 0):
+        """
+        regions are tuple of tuples where each inner tuple holds the class indices that are merged into one region,
+        example:
+        regions= ((1, 2), (2, )) will result in 2 regions: one covering the region of labels 1&2 and the other just 2
+        :param regions:
+        :param seg_key:
+        :param output_key:
+        """
+        self.seg_channel = seg_channel
+        self.output_key = output_key
+        self.seg_key = seg_key
+        self.regions = regions
+    def __call__(self, **data_dict):
+        seg = data_dict.get(self.seg_key)
+        if seg is not None:
+            b, c, *shape = seg.shape
+            region_output = np.zeros((b, len(self.regions), *shape), dtype=bool)
+            for region_id, region_labels in enumerate(self.regions):
+                region_output[:, region_id] |= np.isin(seg[:, self.seg_channel], region_labels)
+            data_dict[self.output_key] = region_output.astype(np.uint8, copy=False)
         return data_dict
-
-    def _apply_to_image(self, img: torch.Tensor, **params) -> torch.Tensor:
-        pass
-
-    def _apply_to_regr_target(self, regression_target, **params) -> torch.Tensor:
-        pass
-
-    def _apply_to_segmentation(self, segmentation: torch.Tensor, **params) -> torch.Tensor:
-        pass
-
-    def _apply_to_keypoints(self, keypoints, **params):
-        pass
-
-    def _apply_to_bbox(self, bbox, **params):
-        pass
-
-    def get_parameters(self, **data_dict) -> dict:
-        return {}
-
-    def __repr__(self):
-        ret_str = str(type(self).__name__) + "( " + ", ".join(
-            [key + " = " + repr(val) for key, val in self.__dict__.items()]) + " )"
-        return ret_str
-
-class SegOnlyTransform(BasicTransform):
-    def apply(self, data_dict: dict, **params) -> dict:
-        if data_dict.get('segmentation') is not None:
-            data_dict['segmentation'] = self._apply_to_segmentation(data_dict['segmentation'], **params)
-        return data_dict
-
-class ConvertSegmentationToRegionsTransform2(SegOnlyTransform):
-    def __init__(self, regions: Union[List, Tuple], channel_in_seg: int = 0):
-        super().__init__()
-        self.regions = [torch.Tensor(i) if not isinstance(i, int) else torch.Tensor([i]) for i in regions]
-        self.channel_in_seg = channel_in_seg
-
-    def _apply_to_segmentation(self, segmentation: torch.Tensor, **params) -> torch.Tensor:
-        num_regions = len(self.regions)
-        region_output = torch.zeros((num_regions, *segmentation.shape[1:]), dtype=torch.bool, device=segmentation.device)
-        for region_id, region_labels in enumerate(self.regions):
-            if len(region_labels) == 1:
-                region_output[region_id] = segmentation[self.channel_in_seg] == region_labels
-            else:
-                region_output[region_id] = torch.isin(segmentation[self.channel_in_seg], region_labels)
-        # we return bool here and leave it to the loss function to cast it to whatever it needs. Transferring bool to
-        # device followed by cast on device should be faster than having fp32 here and transferring that
-        return region_output
 
 
 class DownsampleSegForDSTransform3(AbstractTransform):
@@ -426,7 +368,7 @@ class nnUNetDataLoader3D(nnUNetDataLoaderBase):
             
             For batchsize=2 (normally used in patch-based segmentation for nnUNet) we only load 2 patients and create all crops from them
             For one patient we create only foreground patches
-            For the other patient we create only background/random patches
+            For the other patient we create only background/random patchesbbbbbbbbb
             """
 
             crops_per_volume = np.ceil(self.batch_size / self.original_batch_size)
@@ -549,13 +491,13 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
                                         oversample_foreground_percent=self.oversample_foreground_percent,
                                         sampling_probabilities=None, pad_sides=None)
         else:
-            dl_tr = nnUNetDataLoader3D(dataset_tr, self.batch_size, self.configuration_manager.batch_size,
+            dl_tr = nnUNetDataLoader3D(dataset_tr, self.batch_size, self.original_batch_size,
                                        initial_patch_size,
                                        self.configuration_manager.patch_size,
                                        self.label_manager,
                                        oversample_foreground_percent=self.oversample_foreground_percent,
                                        sampling_probabilities=None, pad_sides=None, probabilistic_oversampling=False)
-            dl_val = nnUNetDataLoader3D(dataset_val, self.batch_size, self.configuration_manager.batch_size,
+            dl_val = nnUNetDataLoader3D(dataset_val, self.batch_size, self.original_batch_size,
                                         self.configuration_manager.patch_size,
                                         self.configuration_manager.patch_size,
                                         self.label_manager,
@@ -585,12 +527,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
 
         if regions is not None:
             # the ignore label must also be converted
-            val_transforms.append(
-                ConvertSegmentationToRegionsTransform2(
-                    regions=(list(regions) + [ignore_label] if ignore_label is not None else regions),
-                    channel_in_seg=0
-                )
-            )
+            val_transforms.append(ConvertSegmentationToRegionsTransform2(list(regions) + [ignore_label]
+                                                                        if ignore_label is not None else regions,
+                                                                        'target', 'target'))
 
         if deep_supervision_scales is not None:
             val_transforms.append(DownsampleSegForDSTransform3(deep_supervision_scales, 0, input_key='target',
@@ -687,12 +626,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
 
         if regions is not None:
             # the ignore label must also be converted
-            tr_transforms.append(
-                ConvertSegmentationToRegionsTransform2(
-                    regions=(list(regions) + [ignore_label] if ignore_label is not None else regions),
-                    channel_in_seg=0
-                )
-            )
+            tr_transforms.append(ConvertSegmentationToRegionsTransform2(list(regions) + [ignore_label]
+                                                                        if ignore_label is not None else regions,
+                                                                        'target', 'target'))
 
         if deep_supervision_scales is not None:
             tr_transforms.append(DownsampleSegForDSTransform3(deep_supervision_scales, 0, input_key='target',
@@ -763,8 +699,6 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
 
         self.on_train_start()
         self.initialized = False
-        self.original_patch_size = self.configuration_manager.patch_size
-        self.original_batch_size = self.configuration_manager.batch_size
 
         self.print_to_log_file('######################### Progressive Growing of Patchsize Training Config #########################')
         self.print_to_log_file('Original patch size: ' + str(self.configuration_manager.patch_size))
@@ -894,6 +828,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         os.environ["nnUNet_keep_files_open"] ="True"
 
         super().__init__(plans, configuration, fold, dataset_json, unpack_dataset, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
 
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
