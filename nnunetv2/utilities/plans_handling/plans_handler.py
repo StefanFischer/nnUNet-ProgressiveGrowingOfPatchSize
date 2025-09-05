@@ -123,6 +123,13 @@ class ConfigurationManager(object):
     def patch_size(self) -> List[int]:
         return self.configuration['patch_size']
 
+    # needed for PGPS curriculum trainer
+    def set_patch_size(self, patch_size):
+        self.configuration['patch_size'] = patch_size
+
+    def set_batch_size(self, batch_size):
+        self.configuration['batch_size'] = batch_size
+
     @property
     def median_image_size_in_voxels(self) -> List[int]:
         return self.configuration['median_image_size_in_voxels']
