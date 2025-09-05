@@ -586,7 +586,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
             # the ignore label must also be converted
             val_transforms.append(
                 ConvertSegmentationToRegionsTransform2(
-                    regions=list(regions) + [ignore_label] if ignore_label is not None else regions,
+                    regions=(list(regions) + [ignore_label] if ignore_label is not None else regions),
                     channel_in_seg=0
                 )
             )
@@ -689,7 +689,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
             # the ignore label must also be converted
             tr_transforms.append(
                 ConvertSegmentationToRegionsTransform2(
-                    regions=list(regions) + [ignore_label] if ignore_label is not None else regions,
+                    regions=(list(regions) + [ignore_label] if ignore_label is not None else regions),
                     channel_in_seg=0
                 )
             )
