@@ -39,7 +39,7 @@ from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-
+warnings.filterwarnings("ignore")
 
 """
 ############################## PGPS-curricula comment ##############################
@@ -549,7 +549,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
                 # Maximal Patch Size Validation
                 self.patch_size = self.original_patch_size
                 self.configuration_manager.set_patch_size(self.patch_size)
-                self.batch_size = 2
+                self.batch_size = self.original_batch_size
                 self.configuration_manager.set_batch_size(self.batch_size)
                 self.dataloader_train_max_patch_size, self.dataloader_val_max_patch_size = self.get_dataloaders()
                 self.initialized = True
@@ -617,9 +617,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
-        self.num_iterations_per_epoch = 250
-        self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 1000
+        self.num_iterations_per_epoch = 1 #250
+        self.num_val_iterations_per_epoch = 1 #50
+        self.num_epochs = 20 #1000
         self.current_epoch = 0
 
 class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance):

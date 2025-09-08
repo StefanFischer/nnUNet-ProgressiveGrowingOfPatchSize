@@ -543,7 +543,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Efficiency(nnUNetTrainer):
                 # Maximal Patch Size Validation
                 self.patch_size = self.original_patch_size
                 self.configuration_manager.set_patch_size(self.patch_size)
-                self.batch_size = 2
+                self.batch_size = self.original_batch_size
                 self.configuration_manager.set_batch_size(self.batch_size)
                 self.dataloader_train_max_patch_size, self.dataloader_val_max_patch_size = self.get_dataloaders()
                 self.initialized = True
