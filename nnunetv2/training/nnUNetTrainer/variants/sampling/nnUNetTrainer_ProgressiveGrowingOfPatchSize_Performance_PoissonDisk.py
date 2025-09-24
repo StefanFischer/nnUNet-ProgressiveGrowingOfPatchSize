@@ -23,6 +23,8 @@ from batchgeneratorsv2.transforms.utils.pseudo2d import Convert3DTo2DTransform, 
 from batchgeneratorsv2.transforms.utils.random import RandomTransform
 from batchgeneratorsv2.transforms.utils.remove_label import RemoveLabelTansform
 from batchgeneratorsv2.transforms.utils.seg_to_regions import ConvertSegmentationToRegionsTransform
+from networkx.utils.decorators import np_random_state
+
 from nnunetv2.training.nnUNetTrainer.nnUNetTrainer import nnUNetTrainer
 
 # pgps imports
@@ -295,26 +297,34 @@ class nnUNetDataLoader(DataLoader):
         data_all = np.zeros(self.data_shape, dtype=np.float32)
         seg_all = np.zeros(self.seg_shape, dtype=np.int16)
 
-        fg_bboxes = {}
+        force_fg = True
 
-        # Count how many random patches in this batch
-        n_random = sum(1 for j in range(self.batch_size) if not self.get_do_oversample(j))
-
-        # Precompute background patches with Poisson-disk
-        rand_bboxes = []
-        if n_random > 0:
-            data0, _, _, _ = self._data.load_case(selected_keys[0])
-            rand_bboxes = sample_background_poisson_aniso(
-                shape=data0.shape[1:],  # spatial shape
-                patch_size=self.patch_size,
-                need_to_pad=self.need_to_pad,
-                n_patches=n_random,
-                rng=np.random.default_rng()
-            )
         rand_idx = 0
 
         for j, i in enumerate(selected_keys):
-            force_fg = self.get_do_oversample(j)
+            crops_per_volume = np.ceil(self.batch_size / self.original_batch_size)
+            if j % crops_per_volume == 0:
+                # load only every n-th volume to reduce dataloading runtime
+                data, seg, seg_prev, properties = self._data.load_case(i)
+                # if old_crop we can keep old bbox
+                old_crop = False
+                # if new patient, we want to switch to load only foreground or only background now
+                force_fg = not force_fg
+
+                if not force_fg:
+                    # Precompute background patches with Poisson-disk
+                    rand_bboxes = sample_background_poisson_aniso(
+                        shape=data.shape[1:],  # spatial shape
+                        patch_size=self.patch_size,
+                        need_to_pad=self.need_to_pad,
+                        n_patches=crops_per_volume,
+                        rng=np.random.default_rng()
+                    )
+            else:
+                # here we keep on loading only foreground or background
+                # if old_crop we can keep old bbox
+                old_crop = True
+
             data, seg, seg_prev, properties = self._data.load_case(i)
             shape = data.shape[1:]
 
@@ -322,7 +332,6 @@ class nnUNetDataLoader(DataLoader):
             if force_fg:
                 bbox_lbs, bbox_ubs = self.get_bbox(shape, True, properties['class_locations'])
                 bbox = [[int(lb), int(ub)] for lb, ub in zip(bbox_lbs, bbox_ubs)]
-                fg_bboxes[i] = bbox
             # ---- Background/random patch ----
             else:
                 bbox = rand_bboxes[rand_idx]
