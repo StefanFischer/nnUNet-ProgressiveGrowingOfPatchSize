@@ -247,7 +247,7 @@ class nnUNetDataLoader(DataLoader):
             For the other patient we create only background/random patchesbbbbbbbbb
             """
 
-            crops_per_volume = np.ceil(np.sqrt(self.batch_size))
+            crops_per_volume = int(np.sqrt(self.batch_size))
             if j % crops_per_volume == 0:
                 # load only every n-th volume to reduce dataloading runtime
                 data, seg, seg_prev, properties = self._data.load_case(i)
@@ -625,48 +625,97 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT(nnUNetTrainer
         self.num_epochs = 1000
         self.current_epoch = 0
 
-# class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance):
-#     def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
-#         rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes = \
-#             super().configure_rotation_dummyDA_mirroring_and_inital_patch_size()
-#         mirror_axes = None
-#         self.inference_allowed_mirroring_axes = None
-#         return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
-
-# 4e1:         "Dice": 0.41825033665313627,
-# 8e1:         "Dice": 0.5757052949466532,
-# 9e1          "Dice": 0.3236456757475104
-# 1e0: train loss nan
-
-
-# lamb 1e-2: 0.582829
-# lamb 1e-3: 0.6447579
-
-import pytorch_optimizer as optim
-
-from nnunetv2.training.lr_scheduler.polylr import PolyLRScheduler
-
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_Lamb1e3(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
+        # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
+        # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
+        self.oversample_foreground_percent = 0.5
+
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        os.environ["nnUNet_keep_files_open"] = "True"
+
         super().__init__(plans, configuration, fold, dataset_json, device)
 
         self.original_patch_size = self.configuration_manager.patch_size
         self.original_batch_size = self.configuration_manager.batch_size
 
         ### Some hyperparameters for you to fiddle with
-        self.initial_lr = 1e-3  # 2
+        self.initial_lr = 1e-2
         self.weight_decay = 3e-5
-        self.num_iterations_per_epoch = 250
-        self.num_val_iterations_per_epoch = 50
-        self.num_epochs = 14  # 1000
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
         self.current_epoch = 0
 
 
-    def configure_optimizers(self):
-        #optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
-        #                            momentum=0.99, nesterov=True)
-        optimizer = optim.Lamb(self.network.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT_10Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
+        # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
+        self.oversample_foreground_percent = 0.5
 
-        lr_scheduler = PolyLRScheduler(optimizer, self.initial_lr, self.num_epochs)
-        return optimizer, lr_scheduler
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        os.environ["nnUNet_keep_files_open"] = "True"
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 25
+        self.num_val_iterations_per_epoch = 5
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT_25Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
+        # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
+        self.oversample_foreground_percent = 0.5
+
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        os.environ["nnUNet_keep_files_open"] = "True"
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = int(0.25*250)
+        self.num_val_iterations_per_epoch = int(0.25*50)
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT_50Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SQRT):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
+        # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
+        self.oversample_foreground_percent = 0.5
+
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        os.environ["nnUNet_keep_files_open"] = "True"
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 125
+        self.num_val_iterations_per_epoch = 25
+        self.num_epochs = 1000
+        self.current_epoch = 0
