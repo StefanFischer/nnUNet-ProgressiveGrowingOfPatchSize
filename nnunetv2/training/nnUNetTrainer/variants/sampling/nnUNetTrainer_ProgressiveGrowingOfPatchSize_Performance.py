@@ -514,7 +514,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
             # case of continuing network training
             print("continue training: from epoch: " + str(self.current_epoch))
 
-            for completed_epoch in range(self.current_epoch):
+            for completed_epoch in range(1, self.current_epoch):
                 if ((completed_epoch % int(self.num_epochs / num_stages)) == 0):
                     self.stage = self.stage + 1
 
