@@ -9,7 +9,7 @@ In the journal extension we fixed an issue for the performance mode, which now a
 
 Curriculum learning can offer faster convergence for deep learning training. Therefore, it can be used to improve segmentation performance or reduce training runtime.
 We implemented two different curriculum modes and tested them on 15 popular datasets (Medical Segmentation Decathlon, BTCV, AMOS22, KiTS23, TotalSegmentatorV2, ToothFairy2):
-1. Performance Mode: this mode significantly outperforms standard fixed patch size training in all 15 tested datasets (Medical Segmentation Decathlon, BTCV, AMOS22, KiTS23, TotalSegmentatorV2, ToothFairy2)j by improving the overall Dice Score by a relative ~1.5%, while only ~90% of the original runtime
+1. Performance Mode: this mode significantly outperforms standard fixed patch size training in all 15 tested datasets (Medical Segmentation Decathlon, BTCV, AMOS22, KiTS23, TotalSegmentatorV2, ToothFairy2) by improving the overall Dice Score by a relative ~1.5%, while only needing ~90% of the original runtime
 2. Efficiency Mode: this mode performs on par with fixed patch size training, while only needing ~45% of the original runtime 
   
 ## How to use Progressive Growing of Patch Size
@@ -47,7 +47,7 @@ If you want to use another costum network, here are the aspects you need to adju
 
 ### CAREFUL: When directional defined classes are presented
 
-Directional defined classes are often present in multi-organ segmentation tasks (BTCV, AMOS22, TotalSegmentator) or in Tooth segmentation (ToothFairy). They are defined as left/right, upper/lower, or front/back structures or even combinations of multiple directions/axis (BTCV/AMOS: left/right kidney, ToothFairy2: Upper Right Central Incisor). As PGPS curricula do have limited context in the starting phase of training, the curriculum struggles with such classes. This is mostly due to nnU-Net defaulty used mirror data augmentation. **Those mirror augmentations have to be disabled for such datasets as the performance can be strongly dropping due to this!** This generally also results in improved performance for default nnU-Net with fixed patch size training. For this scenario ,there are special trainer files available that disable mirroring augmentation during training and test-time.
+Directional defined classes are often present in multi-organ segmentation tasks (BTCV, AMOS22, TotalSegmentator) or in Tooth segmentation (ToothFairy). They are defined as left/right, upper/lower, or front/back structures or even combinations of multiple directions/axis (BTCV/AMOS: left/right kidney, ToothFairy2: Upper Right Central Incisor). As PGPS curricula do have limited context in the starting phase of training, the curriculum struggles with such classes. This is mostly due to nnU-Net defaulty used mirror data augmentation. **Be Careful if datasets contain directional-defined classes and also try disabling mirroring!** This might also result in improved performance for default nnU-Net with fixed patch size training. For this scenario, there are special trainer files available that disable mirroring augmentation during training and test-time.
 
 For the curriculum performance mode:
 ```bash
