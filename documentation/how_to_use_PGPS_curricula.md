@@ -1,7 +1,7 @@
 # How to use Progressive Growing of Patch Size for Training nnU-Net
 
 This is the official implementation of the Journal Article **Progressive Growing of Patch Size: Improved Convergence for Patch-based Medical Image Segmentation via Curriculum
-Learning** accesible [here]((https://arxiv.org/pdf/2510.23241)](https://arxiv.org/pdf/2510.23241)), which is an extension of the MICCAI 2024 main conference paper **Progressive growing of patch size: Resource-efficient curriculum learning for dense prediction tasks** accesible [here](https://papers.miccai.org/miccai-2024/paper/2008_paper.pdf).
+Learning** accesible [here](https://arxiv.org/pdf/2510.23241), which is an extension of the MICCAI 2024 main conference paper **Progressive growing of patch size: Resource-efficient curriculum learning for dense prediction tasks** accesible [here](https://papers.miccai.org/miccai-2024/paper/2008_paper.pdf).
 
 In the journal extension we fixed an issue for the performance mode, which now allows to fully utilize the GPU memory. The old default nnUNet batch creation can lead to overfitting when loading large number of patients to create patches from. Furthermore, now the InstanceNorm3D Layer is patched to allow one more patch size stage (minimal patch size). 
 
