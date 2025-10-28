@@ -1,6 +1,6 @@
 # This is the Repository for Progressive Growing of Patch Size implemened in nnU-Net
 The curriculum learning strategy implemented for nnU-Net improves the training convergence and thus also the final segmentation performance.
-Click [here](https://github.com/StefanFischer/nnUNet-ProgressiveGrowingOfPatchSize/blob/ProgressiveGrowingOfPatchSizeV2.6.2/documentation/how_to_use_PGPS_curricula.md) if you wish to train a nnU-Net instance via the Progressive Growing of Patch Size Curriculum.
+Click [here](./documentation/how_to_use_PGPS_curricula.md) if you wish to train a nnU-Net instance via the Progressive Growing of Patch Size Curriculum.
 
 
 # Welcome to the new nnU-Net!
