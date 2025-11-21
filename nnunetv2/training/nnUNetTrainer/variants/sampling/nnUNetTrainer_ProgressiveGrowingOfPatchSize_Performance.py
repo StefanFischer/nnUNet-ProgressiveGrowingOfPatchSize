@@ -39,6 +39,12 @@ from nnunetv2.training.dataloading.nnunet_dataset import infer_dataset_class
 from nnunetv2.utilities.label_handling.label_handling import convert_labelmap_to_one_hot, determine_num_input_channels
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+
+from nnunetv2.training.loss.deep_supervision import DeepSupervisionWrapper
+from nnunetv2.training.loss.compound_losses import CrossEntropyWithL1
+
+
+
 warnings.filterwarnings("ignore")
 
 """
@@ -617,9 +623,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
-        self.num_iterations_per_epoch = 1 #250
+        self.num_iterations_per_epoch = 3 #250
         self.num_val_iterations_per_epoch = 1 #50
-        self.num_epochs = 20 #1000
+        self.num_epochs = 1000
         self.current_epoch = 0
 
 class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance):
@@ -629,3 +635,42 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring(nnUNet
         mirror_axes = None
         self.inference_allowed_mirroring_axes = None
         return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
+
+
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_CEL1(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance):
+    def _build_loss(self):
+        assert not self.label_manager.has_regions, "regions not supported by this trainer"
+        loss = CrossEntropyWithL1(mode="multiclass")
+
+        # we give each output a weight which decreases exponentially (division by 2) as the resolution decreases
+        # this gives higher resolution outputs more weight in the loss
+        if self.enable_deep_supervision:
+            deep_supervision_scales = self._get_deep_supervision_scales()
+            weights = np.array([1 / (2**i) for i in range(len(deep_supervision_scales))])
+            weights[-1] = 0
+
+            # we don't use the lowest 2 outputs. Normalize weights so that they sum to 1
+            weights = weights / weights.sum()
+            # now wrap the loss
+            loss = DeepSupervisionWrapper(loss, weights)
+        return loss
+
+
+class nnUNetTrainer_CEL1(nnUNetTrainer):
+    def _build_loss(self):
+        assert not self.label_manager.has_regions, "regions not supported by this trainer"
+        loss = CrossEntropyWithL1(mode="multiclass")
+
+        # we give each output a weight which decreases exponentially (division by 2) as the resolution decreases
+        # this gives higher resolution outputs more weight in the loss
+        if self.enable_deep_supervision:
+            deep_supervision_scales = self._get_deep_supervision_scales()
+            weights = np.array([1 / (2**i) for i in range(len(deep_supervision_scales))])
+            weights[-1] = 0
+
+            # we don't use the lowest 2 outputs. Normalize weights so that they sum to 1
+            weights = weights / weights.sum()
+            # now wrap the loss
+            loss = DeepSupervisionWrapper(loss, weights)
+        return loss
+
