@@ -623,9 +623,9 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance(nnUNetTrainer):
         ### Some hyperparameters for you to fiddle with
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
-        self.num_iterations_per_epoch = 3 #250
+        self.num_iterations_per_epoch = 1 #250
         self.num_val_iterations_per_epoch = 1 #50
-        self.num_epochs = 1000
+        self.num_epochs = 20 #1000
         self.current_epoch = 0
 
 class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance):
