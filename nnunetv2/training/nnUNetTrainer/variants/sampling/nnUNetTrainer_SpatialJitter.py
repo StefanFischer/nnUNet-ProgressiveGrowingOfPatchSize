@@ -684,7 +684,6 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitter(nnUN
 
         # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
         os.environ["nnUNet_keep_files_open"] = "True"
-        plans["configurations"]["3d_fullres"]["batch_dice"] = True
 
         super().__init__(plans, configuration, fold, dataset_json, device)
 
