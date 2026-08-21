@@ -218,8 +218,27 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
                 #bbox_lbs = [max(lbs[i], selected_voxel[i + 1] - self.patch_size[i] // 2) for i in range(dim)]
                 
                 # jitter
-                jitter = [np.random.randint(-self.final_patch_size[i] // 4, self.final_patch_size[i] // 4 + 1) for i in range(dim)] 
-                bbox_lbs = [max(lbs[i], min(ubs[i], (selected_voxel[i + 1] - self.patch_size[i] // 2) + jitter[i])) for i in range(dim)]
+                # Convert inputs to numpy arrays for element-wise operations
+                patch_size = np.array(self.patch_size)
+                final_patch_size = np.array(self.final_patch_size)
+                lbs_arr, ubs_arr = np.array(lbs), np.array(ubs)
+
+                p_half = patch_size // 2
+                base_lbs = selected_voxel[1:] - p_half
+                max_j = final_patch_size // 4
+
+                # Derive valid jitter bounds per axis so the patch stays within [lbs, ubs]
+                min_j = np.maximum(-max_j, lbs_arr - base_lbs)
+                max_j = np.minimum(max_j, ubs_arr - patch_size - base_lbs)
+
+                # Sample valid integer jitter per axis
+                jitter = np.array([
+                    np.random.randint(min_j[i], max_j[i] + 1) if min_j[i] <= max_j[i] else 0 
+                    for i in range(dim)
+                ])
+
+                # Final lower bounds, clamped to lbs for small volumes requiring padding
+                bbox_lbs = np.maximum(lbs_arr, base_lbs + jitter).tolist()
 
             else:
                 # If the image does not contain any foreground classes, we fall back to random cropping
