@@ -2,7 +2,6 @@ from time import time
 from typing import Union, Tuple, List
 import os
 import numpy as np
-from nnunetv2.training.nnUNetTrainer.variants.sampling.nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_OTO import nnUNetTrainer_uncenter
 import torch
 from torch import autocast, nn
 
@@ -1035,7 +1034,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV2(nn
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.num_iterations_per_epoch = 250 # 250
-        self.num_val_iterations_per_epoch =  50 #50
+        self.num_val_iterations_per_epoch =  1 #50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1105,7 +1104,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV2_25
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.num_iterations_per_epoch = int(0.25*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.25*50) # 50
+        self.num_val_iterations_per_epoch =  1 #int(0.25*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1128,7 +1127,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV2_50
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.num_iterations_per_epoch = int(0.5*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.5*50) # 50
+        self.num_val_iterations_per_epoch =  1 #int(0.5*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1263,7 +1262,7 @@ class nnUNetTrainer_SpatialJitterV2_25Percent(nnUNetTrainer_SpatialJitterV2):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5
         self.num_iterations_per_epoch = int(0.25*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.25*50) # 50
+        self.num_val_iterations_per_epoch = 1 # int(0.25*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1280,7 +1279,7 @@ class nnUNetTrainer_SpatialJitterV2_50Percent(nnUNetTrainer_SpatialJitterV2):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5    
         self.num_iterations_per_epoch = int(0.5*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.5*50) # 50
+        self.num_val_iterations_per_epoch = 1 # int(0.5*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1314,7 +1313,7 @@ class nnUNetTrainer_10Percent(nnUNetTrainer):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5    
         self.num_iterations_per_epoch = int(0.1*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.1*50) # 50
+        self.num_val_iterations_per_epoch = 1 # int(0.1*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1331,7 +1330,7 @@ class nnUNetTrainer_25Percent(nnUNetTrainer):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5    
         self.num_iterations_per_epoch = int(0.25*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.25*50) # 50
+        self.num_val_iterations_per_epoch = 1 # int(0.25*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
@@ -1348,7 +1347,7 @@ class nnUNetTrainer_50Percent(nnUNetTrainer):
         self.initial_lr = 1e-2
         self.weight_decay = 3e-5    
         self.num_iterations_per_epoch = int(0.5*250) # 250
-        self.num_val_iterations_per_epoch =  int(0.5*50) # 50
+        self.num_val_iterations_per_epoch = 1 # int(0.5*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
 
