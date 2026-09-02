@@ -1141,6 +1141,22 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV2_No
 
 
 class nnUNetTrainer_SpatialJitterV2(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+        # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
+        # to ensure a smooth class balance trajectory, we keep it oversample_foreground_percent=0.5 throughout the whole training
+        self.oversample_foreground_percent = 0.5
+
+        # this potentially can help handling very large numbers of files opened. could be helpful for extremely large batch sizes (>1000)
+        os.environ["nnUNet_keep_files_open"] = "True"
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+
+    
     def get_dataloaders(self):
         if self.dataset_class is None:
             self.dataset_class = infer_dataset_class(self.preprocessed_dataset_folder)
