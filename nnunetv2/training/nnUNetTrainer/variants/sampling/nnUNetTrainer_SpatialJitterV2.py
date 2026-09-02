@@ -1283,3 +1283,74 @@ class nnUNetTrainer_SpatialJitter_V2_50Percent(nnUNetTrainer_SpatialJitterV2):
         self.num_val_iterations_per_epoch =  int(0.5*50) # 50
         self.num_epochs = 1000
         self.current_epoch = 0
+
+class nnUNetTrainer_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5    
+        self.num_iterations_per_epoch = 3 #int(0.5*250) # 250
+        self.num_val_iterations_per_epoch = 1 # int(0.5*50) # 50
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_10Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5    
+        self.num_iterations_per_epoch = int(0.1*250) # 250
+        self.num_val_iterations_per_epoch =  int(0.1*50) # 50
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_25Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5    
+        self.num_iterations_per_epoch = int(0.25*250) # 250
+        self.num_val_iterations_per_epoch =  int(0.25*50) # 50
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_50Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5    
+        self.num_iterations_per_epoch = int(0.5*250) # 250
+        self.num_val_iterations_per_epoch =  int(0.5*50) # 50
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+
+
