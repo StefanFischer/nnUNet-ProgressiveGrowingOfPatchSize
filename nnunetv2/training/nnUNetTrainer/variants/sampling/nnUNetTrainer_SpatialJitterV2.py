@@ -1214,7 +1214,7 @@ class nnUNetTrainer_SpatialJitterV2(nnUNetTrainer):
         return mt_gen_train, mt_gen_val
 
 
-class nnUNetTrainer_SpatialJitter_V2_1Percent(nnUNetTrainer_SpatialJitterV2):
+class nnUNetTrainer_SpatialJitterV2_1Percent(nnUNetTrainer_SpatialJitterV2):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1232,7 +1232,7 @@ class nnUNetTrainer_SpatialJitter_V2_1Percent(nnUNetTrainer_SpatialJitterV2):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitter_V2_10Percent(nnUNetTrainer_SpatialJitterV2):
+class nnUNetTrainer_SpatialJitterV2_10Percent(nnUNetTrainer_SpatialJitterV2):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1250,7 +1250,7 @@ class nnUNetTrainer_SpatialJitter_V2_10Percent(nnUNetTrainer_SpatialJitterV2):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitter_V2_25Percent(nnUNetTrainer_SpatialJitterV2):
+class nnUNetTrainer_SpatialJitterV2_25Percent(nnUNetTrainer_SpatialJitterV2):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1267,7 +1267,7 @@ class nnUNetTrainer_SpatialJitter_V2_25Percent(nnUNetTrainer_SpatialJitterV2):
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_SpatialJitter_V2_50Percent(nnUNetTrainer_SpatialJitterV2):
+class nnUNetTrainer_SpatialJitterV2_50Percent(nnUNetTrainer_SpatialJitterV2):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
