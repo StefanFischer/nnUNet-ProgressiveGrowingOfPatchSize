@@ -271,29 +271,38 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
                 # selected voxel is center voxel. Subtract half the patch size to get lower bbox voxel.
                 # Make sure it is within the bounds of lb and ub
                 # i + 1 because we have first dimension 0!
+                invalid_jitter = any([data_shape[i] < self.patch_size[i] for i in range(len(self.patch_size))])
 
-                # apply FG spatial jitter
-                patch_size = np.array(self.patch_size)
-                final_patch_size = np.array(self.final_patch_size)
-                lbs_arr, ubs_arr = np.array(lbs), np.array(ubs) # do not allow to sample padding
+                # DEBUG
+                #if invalid_jitter:
+                #    print("volume to small for jitter. volume-shape=" + str(data_shape) + "; patchsize=" + str(self.final_patch_size))
 
-                p_half = patch_size // 2
-                base_lbs = selected_voxel[1:] - p_half
+                if np.random.rand() < 0.5 or invalid_jitter:
+                    # default
+                    bbox_lbs = [max(lbs[i], selected_voxel[i + 1] - self.patch_size[i] // 2) for i in range(dim)]
+                else:
+                    # spatial jitter
+                    # Convert inputs to numpy arrays for element-wise operations
+                    patch_size = np.array(self.patch_size)
+                    final_patch_size = np.array(self.final_patch_size)
+                    lbs_arr, ubs_arr = np.array(lbs), np.array(ubs)
 
-                max_j = final_patch_size // 4 # 25% jitter in each directions aligns with the sliding window of 50% overalp
+                    p_half = patch_size // 2
+                    base_lbs = selected_voxel[1:] - p_half
+                    max_j = final_patch_size // 4 # add 25% jitter
 
-                # Derive valid jitter bounds per axis so the lower crop bound stays within [lbs, ubs].
-                min_j = np.maximum(-max_j, lbs_arr - base_lbs)
-                max_j = np.minimum(max_j, ubs_arr - base_lbs)
+                    # Derive valid jitter bounds per axis so the patch stays within [lbs, ubs]
+                    min_j = np.maximum(-max_j, lbs_arr - base_lbs)
+                    max_j = np.minimum(max_j, ubs_arr - patch_size - base_lbs)
 
-                # Sample valid integer jitter per axis
-                jitter = np.array([
-                    np.random.randint(min_j[i], max_j[i] + 1) if min_j[i] <= max_j[i] else 0 
-                    for i in range(dim)
-                ])
+                    # Sample valid integer jitter per axis
+                    jitter = np.array([
+                        np.random.randint(min_j[i], max_j[i] + 1) if min_j[i] <= max_j[i] else 0 
+                        for i in range(dim)
+                    ])
 
-                # Clamp both sides. Padding is valid when a patch is larger than the input volume.
-                bbox_lbs = np.clip(base_lbs + jitter, lbs_arr, ubs_arr).tolist()
+                    # Final lower bounds, clamped to lbs for small volumes requiring padding
+                    bbox_lbs = np.maximum(lbs_arr, base_lbs + jitter).tolist()
 
             else:
                 # If the image does not contain any foreground classes, we fall back to random cropping
@@ -401,7 +410,7 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
 
 
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3(nnUNetTrainer):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4(nnUNetTrainer):
     def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
         patch_size = self.configuration_manager.patch_size
         dim = len(patch_size)
@@ -1042,7 +1051,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3(nn
         self.current_epoch = 0
 
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -1065,7 +1074,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_1P
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_10Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4_10Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -1088,7 +1097,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_10
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_25Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4_25Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -1111,7 +1120,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_25
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_50Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4_50Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -1134,7 +1143,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_50
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV4):
     def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
         rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes = \
             super().configure_rotation_dummyDA_mirroring_and_inital_patch_size()
@@ -1143,7 +1152,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_No
         return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
 
 
-class nnUNetTrainer_SpatialJitterV3(nnUNetTrainer):
+class nnUNetTrainer_SpatialJitterV4(nnUNetTrainer):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -1232,7 +1241,7 @@ class nnUNetTrainer_SpatialJitterV3(nnUNetTrainer):
         return mt_gen_train, mt_gen_val
 
 
-class nnUNetTrainer_SpatialJitterV3_1Percent(nnUNetTrainer_SpatialJitterV3):
+class nnUNetTrainer_SpatialJitterV4_1Percent(nnUNetTrainer_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1250,7 +1259,7 @@ class nnUNetTrainer_SpatialJitterV3_1Percent(nnUNetTrainer_SpatialJitterV3):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitterV3_10Percent(nnUNetTrainer_SpatialJitterV3):
+class nnUNetTrainer_SpatialJitterV4_10Percent(nnUNetTrainer_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1268,7 +1277,7 @@ class nnUNetTrainer_SpatialJitterV3_10Percent(nnUNetTrainer_SpatialJitterV3):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitterV3_25Percent(nnUNetTrainer_SpatialJitterV3):
+class nnUNetTrainer_SpatialJitterV4_25Percent(nnUNetTrainer_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -1285,7 +1294,7 @@ class nnUNetTrainer_SpatialJitterV3_25Percent(nnUNetTrainer_SpatialJitterV3):
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_SpatialJitterV3_50Percent(nnUNetTrainer_SpatialJitterV3):
+class nnUNetTrainer_SpatialJitterV4_50Percent(nnUNetTrainer_SpatialJitterV4):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
