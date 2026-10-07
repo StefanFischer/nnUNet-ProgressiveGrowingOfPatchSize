@@ -163,6 +163,8 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
         lbs = [- need_to_pad[i] // 2 for i in range(dim)]
         ubs = [data_shape[i] + need_to_pad[i] // 2 + need_to_pad[i] % 2 - self.patch_size[i] for i in range(dim)]
 
+        #print("lbs: " + str(lbs) + " ubs: " + str(ubs) + " data_shape: " + str(data_shape) + " patch_size: " + str(self.patch_size))
+
         # if not force_fg then we can just sample the bbox randomly from lb and ub. Else we need to make sure we get
         # at least one of the foreground classes in the patch
         if not force_fg and not self.has_ignore:
@@ -213,47 +215,57 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
                 # selected voxel is center voxel. Subtract half the patch size to get lower bbox voxel.
                 # Make sure it is within the bounds of lb and ub
                 # i + 1 because we have first dimension 0!
-                invalid_jitter = any([data_shape[i] < self.patch_size[i] for i in range(len(self.patch_size))])
+                invalid_jitter = any([np.abs(need_to_pad[i]) > 0 for i in range(len(self.patch_size))])
 
                 # DEBUG
                 #if invalid_jitter:
                 #    print("volume to small for jitter. volume-shape=" + str(data_shape) + "; patchsize=" + str(self.final_patch_size))
 
-                if np.random.rand() < 0.5 or invalid_jitter:
+                if np.random.rand() < 0.5:
                     # default
-                    bbox_lbs = [max(lbs[i], selected_voxel[i + 1] - self.patch_size[i] // 2) for i in range(dim)]
+                    #bbox_lbs = [max(lbs[i], selected_voxel[i + 1] - self.patch_size[i] // 2) for i in range(dim)]
+                    bbox_lbs = [max(lbs[i], min(ubs[i], selected_voxel[i + 1] - self.patch_size[i] // 2)) for i in range(dim)]
                 else:
                     # spatial jitter
                     # TODO: only jitter on axis that self.patch_size is smaller than data_shape
 
                     # Convert inputs to numpy arrays for element-wise operations
-                    patch_size = np.array(self.patch_size)
                     final_patch_size = np.array(self.final_patch_size)
-                    lbs_arr, ubs_arr = np.array(lbs), np.array(ubs)
+                    current_patch_size = np.array(self.patch_size)
+                    base_lbs = selected_voxel[1:] - current_patch_size // 2
+                    jitter_value = final_patch_size // 4 # add 25% jitter
+                    #jitter_value = final_patch_size // 3 # add 33% jitter
+                    #jitter_value = final_patch_size // 2 # add 50% jitter
 
-                    #print("lbs: " + str(lbs_arr) + " ubs: " + str(ubs_arr) + " patch_size: " + str(patch_size) + " final_patch_size: " + str(final_patch_size) + " data_shape: " + str(data_shape))
 
-                    p_half = patch_size // 2
-                    base_lbs = selected_voxel[1:] - p_half
-                    max_j = final_patch_size // 4 # add 25% jitter
 
-                    # Derive valid jitter bounds per axis so the patch stays within [lbs, ubs]
-                    min_j = np.maximum(-max_j, lbs_arr - base_lbs)
-                    max_j = np.minimum(max_j, ubs_arr - patch_size - base_lbs)
+                    allowed_pos_jitter = np.minimum(ubs - base_lbs, jitter_value)
+                    allowed_neg_jitter = -np.minimum(base_lbs - lbs, jitter_value)
 
-                    # Sample valid integer jitter per axis
-                    jitter = np.array([
-                        np.random.randint(min_j[i], max_j[i] + 1) if min_j[i] <= max_j[i] else 0 
-                        for i in range(dim)
-                    ])
+                    #print("jitter range: " + str(allowed_neg_jitter) + " to " + str(allowed_pos_jitter) + " for patch size: " + str(self.patch_size) + " and volume size: " + str(data_shape))
 
-                    # Final lower bounds, clamped to lbs for small volumes requiring padding
-                    bbox_lbs = np.maximum(lbs_arr, base_lbs + jitter).tolist()
+
+                    jitter = np.zeros(dim, dtype=int)
+                    for idx in range(dim):
+                        if allowed_pos_jitter[idx] > allowed_neg_jitter[idx]:
+                            jitter[idx] = np.random.randint(allowed_neg_jitter[idx], allowed_pos_jitter[idx] + 1)
+                    #print("Jitter applied: " + str(jitter) + " for patch size: " + str(self.patch_size) + " and volume size: " + str(data_shape))
+
+
+                    bbox_lbs = [max(lbs[i], min(ubs[i], selected_voxel[i + 1] + jitter[i] - self.patch_size[i] // 2)) for i in range(dim)]
             else:
                 # If the image does not contain any foreground classes, we fall back to random cropping
                 bbox_lbs = [np.random.randint(lbs[i], ubs[i] + 1) for i in range(dim)]
 
         bbox_ubs = [bbox_lbs[i] + self.patch_size[i] for i in range(dim)]
+
+        # check if bbox_ubs and bbox_lbs are within the bounds of lbs and ubs. If not, throw error
+        for d in range(dim):
+            if bbox_lbs[d] < lbs[d] or bbox_lbs[d] > ubs[d]:
+                raise RuntimeError(
+                    f"bbox_lbs and bbox_ubs are not within the bounds of lbs and ubs. "
+                    f"bbox_lbs: {bbox_lbs}, bbox_ubs: {bbox_ubs}, lbs: {lbs}, ubs: {ubs}, data_shape: {data_shape}, patch_size: {self.patch_size}"
+                )
 
         return bbox_lbs, bbox_ubs
 
@@ -355,7 +367,7 @@ class nnUNetDataLoader_SpatialJitter(DataLoader):
 
 
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33(nnUNetTrainer):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333(nnUNetTrainer):
 
     def get_dataloaders(self):
         if self.dataset_class is None:
@@ -712,7 +724,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33(n
         self.current_epoch = 0
 
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -735,7 +747,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_1
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_10Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333_10Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -758,7 +770,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_1
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_25Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333_25Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,  
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -781,7 +793,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_2
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_50Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333_50Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
         # original value of oversample_foreground_percent=0.33 is overwritten to 0.5, as nnU-Net falls back to a oversample_foreground_percent=0.5 for batchsize=2 (one forced foreground patch and one random/background patch)
@@ -804,7 +816,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_5
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333_NoMirroring(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3333):
     def configure_rotation_dummyDA_mirroring_and_inital_patch_size(self):
         rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes = \
             super().configure_rotation_dummyDA_mirroring_and_inital_patch_size()
@@ -813,7 +825,7 @@ class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_N
         return rotation_for_DA, do_dummy_2d_data_aug, initial_patch_size, mirror_axes
 
 
-class nnUNetTrainer_SpatialJitterV33(nnUNetTrainer):
+class nnUNetTrainer_SpatialJitterV3333(nnUNetTrainer):
     def get_dataloaders(self):
         if self.dataset_class is None:
             self.dataset_class = infer_dataset_class(self.preprocessed_dataset_folder)
@@ -886,7 +898,7 @@ class nnUNetTrainer_SpatialJitterV33(nnUNetTrainer):
         return mt_gen_train, mt_gen_val
 
 
-class nnUNetTrainer_SpatialJitterV33_1Percent(nnUNetTrainer_SpatialJitterV33):
+class nnUNetTrainer_SpatialJitterV3333_1Percent(nnUNetTrainer_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -904,7 +916,7 @@ class nnUNetTrainer_SpatialJitterV33_1Percent(nnUNetTrainer_SpatialJitterV33):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitterV33_10Percent(nnUNetTrainer_SpatialJitterV33):
+class nnUNetTrainer_SpatialJitterV3333_10Percent(nnUNetTrainer_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -922,7 +934,7 @@ class nnUNetTrainer_SpatialJitterV33_10Percent(nnUNetTrainer_SpatialJitterV33):
         self.current_epoch = 0
 
 
-class nnUNetTrainer_SpatialJitterV33_25Percent(nnUNetTrainer_SpatialJitterV33):
+class nnUNetTrainer_SpatialJitterV3333_25Percent(nnUNetTrainer_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -939,7 +951,7 @@ class nnUNetTrainer_SpatialJitterV33_25Percent(nnUNetTrainer_SpatialJitterV33):
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_SpatialJitterV33_50Percent(nnUNetTrainer_SpatialJitterV33):
+class nnUNetTrainer_SpatialJitterV3333_50Percent(nnUNetTrainer_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -956,7 +968,7 @@ class nnUNetTrainer_SpatialJitterV33_50Percent(nnUNetTrainer_SpatialJitterV33):
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_SpatialJitterV33_50Percent(nnUNetTrainer_SpatialJitterV33):
+class nnUNetTrainer_SpatialJitterV3333_50Percent(nnUNetTrainer_SpatialJitterV3333):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
                  device: torch.device = torch.device('cuda')):
 
@@ -973,7 +985,7 @@ class nnUNetTrainer_SpatialJitterV33_50Percent(nnUNetTrainer_SpatialJitterV33):
         self.num_epochs = 1000
         self.current_epoch = 0
 
-class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33_NoDA_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV33):
+class nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3_NoDA_1Percent(nnUNetTrainer_ProgressiveGrowingOfPatchSize_Performance_SpatialJitterV3):
     
     @staticmethod
     def get_training_transforms(
