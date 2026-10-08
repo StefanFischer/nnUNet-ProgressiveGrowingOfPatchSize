@@ -16,7 +16,7 @@ import multiprocessing
 import shutil
 from time import sleep
 from typing import Tuple
-
+import scipy
 import SimpleITK
 import numpy as np
 import pandas as pd
@@ -33,6 +33,27 @@ from nnunetv2.utilities.dataset_name_id_conversion import maybe_convert_to_datas
 from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
 from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+
+def _dilate_foreground_fast(foreground_mask, patch_size=(80, 192, 160), factor=0.25):
+    # Compute 1D kernel lengths along each axis
+    k_z, k_y, k_x = [int(factor * s) for s in patch_size]  # (20, 48, 40)
+
+    # Extract 3D volume (strip channel)
+    mask_3d = foreground_mask[0]
+
+    # Decompose into 3 sequential 1D 1-pass dilations
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((k_z, 1, 1))
+    )
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((1, k_y, 1))
+    )
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((1, 1, k_x))
+    )
+
+    # Restore channel dimension
+    return mask_3d[None]
 
 
 class DefaultPreprocessor(object):
@@ -176,7 +197,15 @@ class DefaultPreprocessor(object):
         rndst = np.random.RandomState(seed)
         class_locs = {}
         foreground_mask = seg != 0
+
+        print("foreground mask shape", foreground_mask.shape)
+
+        # TODO: dilate foreground mask by 25% of patch size in each direction
+        patch_size = (80, 192, 160) # msd lung
+        dilation_factor = 0.25
+        foreground_mask = _dilate_foreground_fast(foreground_mask, patch_size, dilation_factor)
         foreground_coords = np.argwhere(foreground_mask)
+
         seg = seg[foreground_mask]
         del foreground_mask
         unique_labels = pd.unique(seg.ravel())
