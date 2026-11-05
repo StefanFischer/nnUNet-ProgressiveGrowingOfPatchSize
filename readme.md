@@ -1,10 +1,28 @@
-# nnU-Net
+# This is the Repository for Progressive Growing of Patch Size implemened in nnU-Net
+The curriculum learning strategy implemented for nnU-Net improves the training convergence and thus also the final segmentation performance.
+Click [here](https://github.com/StefanFischer/nnUNet-ProgressiveGrowingOfPatchSize/blob/ProgressiveGrowingOfPatchSizeV2.6.2/documentation/how_to_use_PGPS_curricula.md) if you wish to train a nnU-Net instance via the Progressive Growing of Patch Size Curriculum.
 
-nnU-Net is a semantic segmentation framework that automatically adapts its pipeline to a dataset. It analyzes the training data, creates a dataset fingerprint, configures suitable U-Net variants, and provides an end-to-end workflow from preprocessing to training, model selection, and inference.
 
-It is primarily designed for supervised biomedical image segmentation, but it also works well as a strong baseline and development framework for researchers working on new segmentation methods.
+# Welcome to the new nnU-Net!
 
-If you are looking for nnU-Net v1, use the [v1 branch](https://github.com/MIC-DKFZ/nnUNet/tree/nnunetv1). If you are migrating from v1, start with the [TLDR migration guide](documentation/tldr_migration_guide_from_v1.md).
+Click [here](https://github.com/MIC-DKFZ/nnUNet/tree/nnunetv1) if you were looking for the old one instead.
+
+Coming from V1? Check out the [TLDR Migration Guide](documentation/tldr_migration_guide_from_v1.md). Reading the rest of the documentation is still strongly recommended ;-)
+
+## **2024-04-18 UPDATE: New residual encoder UNet presets available!**
+Residual encoder UNet presets substantially improve segmentation performance.
+They ship for a variety of GPU memory targets. It's all awesome stuff, promised! 
+Read more :point_right: [here](documentation/resenc_presets.md) :point_left:
+
+Also check out our [new paper](https://arxiv.org/pdf/2404.09556.pdf) on systematically benchmarking recent developments in medical image segmentation. You might be surprised!
+
+# What is nnU-Net?
+Image datasets are enormously diverse: image dimensionality (2D, 3D), modalities/input channels (RGB image, CT, MRI, microscopy, ...), 
+image sizes, voxel sizes, class ratio, target structure properties and more change substantially between datasets. 
+Traditionally, given a new problem, a tailored solution needs to be manually designed and optimized  - a process that 
+is prone to errors, not scalable and where success is overwhelmingly determined by the skill of the experimenter. Even 
+for experts, this process is anything but simple: there are not only many design choices and data properties that need to 
+be considered, but they are also tightly interconnected, rendering reliable manual pipeline optimization all but impossible! 
 
 ![nnU-Net overview](documentation/assets/nnU-Net_overview.png)
 
