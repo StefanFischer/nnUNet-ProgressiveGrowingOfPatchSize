@@ -36,7 +36,7 @@ from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
 
 def _dilate_foreground_fast(foreground_mask, patch_size=(128, 128, 128), factor=0.25):
     # Compute 1D kernel lengths along each axis
-    k_z, k_y, k_x = [int(factor * s) for s in patch_size]  # (20, 48, 40)
+    k_z, k_y, k_x = [int(factor * s) for s in patch_size]
 
     # Extract 3D volume (strip channel)
     mask_3d = foreground_mask[0]
@@ -51,9 +51,6 @@ def _dilate_foreground_fast(foreground_mask, patch_size=(128, 128, 128), factor=
     mask_3d = scipy.ndimage.binary_dilation(
         mask_3d, structure=np.ones((1, 1, k_x))
     )
-
-    if np.sum(mask_3d) == 0:
-        raise ValueError("Foreground mask has been eroded to nothing. Consider using a smaller factor.")
 
     # Restore channel dimension
     return mask_3d[None]
