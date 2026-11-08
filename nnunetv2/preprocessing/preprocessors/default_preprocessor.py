@@ -16,14 +16,14 @@ import multiprocessing
 import shutil
 from time import sleep
 from typing import Tuple
-
+import scipy
 import SimpleITK
 import numpy as np
 import pandas as pd
 from batchgenerators.utilities.file_and_folder_operations import *
 from tqdm import tqdm
 from typing import Union
-
+import os
 import nnunetv2
 from nnunetv2.paths import nnUNet_preprocessed, nnUNet_raw
 from nnunetv2.preprocessing.cropping.cropping import crop_to_nonzero
@@ -33,6 +33,30 @@ from nnunetv2.utilities.dataset_name_id_conversion import maybe_convert_to_datas
 from nnunetv2.utilities.find_class_by_name import recursive_find_python_class
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
 from nnunetv2.utilities.utils import get_filenames_of_train_images_and_targets
+
+def _dilate_foreground_fast(foreground_mask, patch_size=(128, 128, 128), factor=0.25):
+    # Compute 1D kernel lengths along each axis
+    k_z, k_y, k_x = [int(factor * s) for s in patch_size]  # (20, 48, 40)
+
+    # Extract 3D volume (strip channel)
+    mask_3d = foreground_mask[0]
+
+    # Decompose into 3 sequential 1D 1-pass dilations
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((k_z, 1, 1))
+    )
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((1, k_y, 1))
+    )
+    mask_3d = scipy.ndimage.binary_dilation(
+        mask_3d, structure=np.ones((1, 1, k_x))
+    )
+
+    if np.sum(mask_3d) == 0:
+        raise ValueError("Foreground mask has been eroded to nothing. Consider using a smaller factor.")
+
+    # Restore channel dimension
+    return mask_3d[None]
 
 
 class DefaultPreprocessor(object):
@@ -108,7 +132,7 @@ class DefaultPreprocessor(object):
 
             # no need to filter background in regions because it is already filtered in handle_labels
             # print(all_labels, regions)
-            properties['class_locations'] = self._sample_foreground_locations(seg, collect_for_this,
+            properties['class_locations'] = self._sample_foreground_locations(seg, collect_for_this, configuration_manager=configuration_manager,
                                                                                    verbose=self.verbose)
             seg = self.modify_seg_fn(seg, plans_manager, dataset_json, configuration_manager)
         if np.max(seg) > 127:
@@ -169,61 +193,67 @@ class DefaultPreprocessor(object):
 
     @staticmethod
     def _sample_foreground_locations(seg: np.ndarray, classes_or_regions: Union[List[int], List[Tuple[int, ...]]],
-                                     seed: int = 1234, verbose: bool = False):
+                                        configuration_manager: ConfigurationManager, seed: int = 1234, verbose: bool = False):
         num_samples = 10000
-        min_percent_coverage = 0.01  # at least 1% of the class voxels need to be selected, otherwise it may be too
-        # sparse
+        min_percent_coverage = 0.01  # at least 1% of the class voxels need to be selected
         rndst = np.random.RandomState(seed)
         class_locs = {}
-        foreground_mask = seg != 0
-        foreground_coords = np.argwhere(foreground_mask)
-        seg = seg[foreground_mask]
-        del foreground_mask
-        unique_labels = pd.unique(seg.ravel())
 
-        # We don't need more than 1e7 foreground samples. That's insanity. Cap here
-        if len(foreground_coords) > 1e7:
-            take_every = math.floor(len(foreground_coords) / 1e7)
-            # keep computation time reasonable
-            if verbose:
-                print(f'Subsampling foreground pixels 1:{take_every} for computational reasons')
-            foreground_coords = foreground_coords[::take_every]
-            seg = seg[::take_every]
+        patch_size = configuration_manager.patch_size #(80, 192, 160)  # msd lung
+        print("Using patch size for dilation: ", patch_size)
+        
+        dilation_factor = 0.25
+
+        if verbose:
+            print("Original seg shape:", seg.shape)
 
         for c in classes_or_regions:
             k = c if not isinstance(c, list) else tuple(c)
 
-            # check if any of the labels are in seg, if not skip c
+            # 1. Create binary mask for the current class or region from the original seg
             if isinstance(c, (tuple, list)):
-                if not any([ci in unique_labels for ci in c]):
-                    class_locs[k] = []
-                    continue
+                class_mask = np.isin(seg, c)
             else:
-                if c not in unique_labels:
-                    class_locs[k] = []
-                    continue
+                class_mask = (seg == c)
 
-            if isinstance(c, (tuple, list)):
-                mask = seg == c[0]
-                for cc in c[1:]:
-                    mask = mask | (seg == cc)
-                all_locs = foreground_coords[mask]
+            # Check if any voxels exist for this class/region
+            if not np.any(class_mask):
+                class_locs[k] = []
+                if verbose:
+                    print(f"Class/Region {k}: no voxels found.")
+                continue
+
+            if os.environ["SPATIAL_JITTER_BY_DILATION"] == "1":
+                fg_old = np.sum(class_mask)
+
+                # 2. Dilate the mask for this specific class to include neighboring background voxels
+                class_mask_dilated = _dilate_foreground_fast(class_mask, patch_size, dilation_factor)
+                fg_new = np.sum(class_mask_dilated)
+
+                if verbose:
+                    print(f"Class/Region {k} - voxels before dilation: {fg_old}, after dilation: {fg_new}")
             else:
-                mask = seg == c
-                all_locs = foreground_coords[mask]
+                class_mask_dilated = class_mask
+
+            # 3. Get coordinates from the dilated class mask (which now includes background neighbors)
+            all_locs = np.argwhere(class_mask_dilated)
+
             if len(all_locs) == 0:
                 class_locs[k] = []
                 continue
+
             target_num_samples = min(num_samples, len(all_locs))
             target_num_samples = max(target_num_samples, int(np.ceil(len(all_locs) * min_percent_coverage)))
 
+            # Sample center locations
             selected = all_locs[rndst.choice(len(all_locs), target_num_samples, replace=False)]
             class_locs[k] = selected
+
             if verbose:
-                print(c, target_num_samples)
-            seg = seg[~mask]
-            foreground_coords = foreground_coords[~mask]
+                print(f"Class/Region {k}: sampled {target_num_samples} locations.")
+
         return class_locs
+
 
     def _normalize(self, data: np.ndarray, seg: np.ndarray, configuration_manager: ConfigurationManager,
                    foreground_intensity_properties_per_channel: dict) -> np.ndarray:

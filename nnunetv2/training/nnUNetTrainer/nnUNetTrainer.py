@@ -980,6 +980,35 @@ class nnUNetTrainer(object):
         else:
             target = target.to(self.device, non_blocking=True)
 
+
+        # TODO: save nii.gz of the input data and target for debugging purposes
+        if False:
+            import SimpleITK as sitk
+            sitk.WriteImage(sitk.GetImageFromArray(data[-1, 0].cpu().numpy()), "input_data.nii.gz")
+            if isinstance(target, list):
+                sitk.WriteImage(sitk.GetImageFromArray(target[0][-1][0].cpu().numpy()), f"target.nii.gz")
+            else:
+                sitk.WriteImage(sitk.GetImageFromArray(target[0].cpu().numpy()), "target.nii.gz")
+            exit()
+
+        # check if center of target is foreground
+        if False:
+            if isinstance(target, list):
+                fg_data = target[0][-1]
+                print(fg_data.shape)
+                target_center = fg_data[0, fg_data.shape[1] // 2, fg_data.shape[2] // 2, fg_data.shape[3] // 2]
+            else:
+                target_center = target[0, target.shape[2] // 2, target.shape[3] // 2, target.shape[4] // 2]
+            if target_center == 0:
+                self.print_to_log_file("Warning: Center of target is background.")
+                import SimpleITK as sitk
+                sitk.WriteImage(sitk.GetImageFromArray(data[-1, 0].cpu().numpy()), "input_data.nii.gz")
+                if isinstance(target, list):
+                    sitk.WriteImage(sitk.GetImageFromArray(target[0][-1][0].cpu().numpy()), f"target.nii.gz")
+                else:
+                    sitk.WriteImage(sitk.GetImageFromArray(target[0].cpu().numpy()), "target.nii.gz")
+                exit()
+
         self.optimizer.zero_grad(set_to_none=True)
         # Autocast can be annoying
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
@@ -1132,17 +1161,19 @@ class nnUNetTrainer(object):
 
         # handling periodic checkpointing
         current_epoch = self.current_epoch
-        if (current_epoch + 1) % self.save_every == 0 and current_epoch != (self.num_epochs - 1):
-            self.save_checkpoint(join(self.output_folder, 'checkpoint_latest.pth'))
 
-        # handle 'best' checkpointing. ema_fg_dice is computed by the logger and can be accessed like this
-        if self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema:
-            self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
-            self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
-            self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
+        if False:
+            if (current_epoch + 1) % self.save_every == 0 and current_epoch != (self.num_epochs - 1):
+                self.save_checkpoint(join(self.output_folder, 'checkpoint_latest.pth'))
 
-        if self.local_rank == 0:
-            self.logger.plot_progress_png(self.output_folder)
+            # handle 'best' checkpointing. ema_fg_dice is computed by the logger and can be accessed like this
+            if self._best_ema is None or self.logger.my_fantastic_logging['ema_fg_dice'][-1] > self._best_ema:
+                self._best_ema = self.logger.my_fantastic_logging['ema_fg_dice'][-1]
+                self.print_to_log_file(f"Yayy! New best EMA pseudo Dice: {np.round(self._best_ema, decimals=4)}")
+                self.save_checkpoint(join(self.output_folder, 'checkpoint_best.pth'))
+
+            if self.local_rank == 0:
+                self.logger.plot_progress_png(self.output_folder)
 
         self.current_epoch += 1
 
@@ -1381,3 +1412,90 @@ class nnUNetTrainer(object):
             self.on_epoch_end()
 
         self.on_train_end()
+
+class nnUNetTrainer_SpatialJitter_byDilation_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_SpatialJitter_byDilation50_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_SpatialJitter_byDilation25_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+class nnUNetTrainer_SpatialJitter_byErosion_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
+        self.current_epoch = 0
+
+
+
+class nnUNetTrainer_1Percent(nnUNetTrainer):
+    def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict,
+                 device: torch.device = torch.device('cuda')):
+
+        super().__init__(plans, configuration, fold, dataset_json, device)
+
+        self.original_patch_size = self.configuration_manager.patch_size
+        self.original_batch_size = self.configuration_manager.batch_size
+
+        ### Some hyperparameters for you to fiddle with
+        self.initial_lr = 1e-2
+        self.weight_decay = 3e-5
+        self.num_iterations_per_epoch = 3
+        self.num_val_iterations_per_epoch = 1
+        self.num_epochs = 1000
+        self.current_epoch = 0
